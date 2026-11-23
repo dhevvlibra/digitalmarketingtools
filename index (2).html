@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>SosmedKit</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* ============ Design tokens ============ */
+:root{
+  --bg:#f4f5f9; --surface:#ffffff; --surface-2:#f1f2f6; --text:#14161c; --muted:#7c8293; --line:rgba(20,22,28,.07);
+  --accent:#5b5bf0; --accent-ink:#ffffff; --accent-soft:rgba(91,91,240,.12);
+  --ok:#16a34a; --ok-soft:rgba(22,163,74,.12);
+  --warn:#d97706; --warn-soft:rgba(217,119,6,.13);
+  --bad:#dc2626; --bad-soft:rgba(220,38,38,.12);
+  --ig:#e1306c; --tt:#111318; --fb:#1877f2;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px rgba(16,24,40,.05);
+  --nav-h:68px;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme=light]){
+  --bg:#0f1115; --surface:#181b21; --surface-2:#22262e; --text:#eef0f4; --muted:#8b92a3; --line:rgba(255,255,255,.07);
+  --accent:#7c7cff; --accent-soft:rgba(124,124,255,.16); --tt:#f2f2f2; --shadow:none;
+}}
+:root[data-theme=dark]{
+  --bg:#0f1115; --surface:#181b21; --surface-2:#22262e; --text:#eef0f4; --muted:#8b92a3; --line:rgba(255,255,255,.07);
+  --accent:#7c7cff; --accent-soft:rgba(124,124,255,.16); --tt:#f2f2f2; --shadow:none;
+}
+/* Saat dibuka di Telegram, ikuti warna tema Telegram */
+:root[data-tg]{
+  --bg:var(--tg-theme-secondary-bg-color); --surface:var(--tg-theme-section-bg-color,var(--tg-theme-bg-color));
+  --text:var(--tg-theme-text-color); --muted:var(--tg-theme-hint-color);
+  --accent:var(--tg-theme-button-color); --accent-ink:var(--tg-theme-button-text-color);
+  --accent-soft:color-mix(in srgb,var(--tg-theme-button-color) 14%,transparent);
+  --surface-2:color-mix(in srgb,var(--tg-theme-text-color) 6%,var(--surface));
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg)}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;color:var(--text);font-size:15px;line-height:1.4;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ============ Header ============ */
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:14px 16px 10px;display:flex;align-items:center;gap:12px}
+.title{flex:1;min-width:0}
+.title .eyebrow{font-size:12px;color:var(--muted);font-weight:500}
+.title h1{margin:1px 0 0;font-size:22px;font-weight:750;letter-spacing:-.02em}
+.month{display:flex;align-items:center;background:var(--surface);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+.month button{border:0;background:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.month button:active{background:var(--surface-2)}
+.month span{font-size:13px;font-weight:600;padding:0 4px;min-width:64px;text-align:center}
+main{padding:4px 16px 64px;max-width:640px;margin:0 auto}
+
+/* ============ Cards & type ============ */
+.card{background:var(--surface);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
+.card-h h2{font-size:16px;font-weight:700;margin:0;letter-spacing:-.01em}
+.card-h .link{border:0;background:none;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;padding:4px}
+.section-label{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.note{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* ============ Buttons ============ */
+.btn{border:0;background:var(--accent);color:var(--accent-ink);height:48px;padding:0 18px;border-radius:var(--r-md);font-size:15px;font-weight:650;cursor:pointer;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,opacity .15s}
+.btn:active{transform:scale(.98);opacity:.9}
+.btn.sec{background:var(--accent-soft);color:var(--accent)}
+.btn.ghost{background:var(--surface-2);color:var(--text)}
+.btn.danger{background:none;color:var(--bad);height:44px}
+.btn-stack{display:grid;gap:8px;margin-top:16px}
+
+/* ============ Bottom nav ============ */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;max-width:96px;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;color:var(--muted);font-size:11px;font-weight:600}
+nav button .pill{width:52px;height:30px;border-radius:999px;display:grid;place-items:center;transition:background .2s}
+nav button.active{color:var(--accent)}
+nav button.active .pill{background:var(--accent-soft)}
+
+/* ============ FAB ============ */
+.fab{position:fixed;right:18px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);z-index:9;width:56px;height:56px;border-radius:18px;border:0;
+  background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fab svg.i{width:26px;height:26px;stroke-width:2.2}
+.fab:active{transform:scale(.95)}
+
+/* ============ Calendar ============ */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal .dow{font-size:11px;font-weight:600;color:var(--muted);padding-bottom:6px}
+.cal .day{aspect-ratio:1/1.05;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:500;cursor:pointer;border:0;background:none;padding:0}
+.cal .day:active{background:var(--surface-2)}
+.cal .day.empty{pointer-events:none}
+.cal .day.wk{color:var(--muted)}
+.cal .day.today .n{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.cal .day .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.cal .day.sel .n{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.dots{display:flex;gap:3px;height:5px}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.p-instagram{background:var(--ig)}.p-tiktok{background:var(--tt)}.p-facebook{background:var(--fb)}
+.legend{display:flex;gap:14px;justify-content:center;font-size:12px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend .dot{width:8px;height:8px}
+
+/* status chips */
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.chip{background:var(--surface);border-radius:var(--r-md);padding:10px 8px;box-shadow:var(--shadow);text-align:left}
+.chip .v{font-size:20px;font-weight:750;letter-spacing:-.02em}
+.chip .l{font-size:11px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:5px}
+
+/* post rows */
+.post{display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer}
+.post + .post{border-top:1px solid var(--line)}
+.pf{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
+.pf svg{width:20px;height:20px}
+.pf.instagram{background:linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af)}
+.pf.tiktok{background:#111318}
+.pf.facebook{background:var(--fb)}
+.post .body{flex:1;min-width:0}
+.post .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post .m{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.date-col{text-align:center;width:34px;flex:none}
+.date-col b{display:block;font-size:17px;line-height:1.1}
+.date-col span{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600}
+.tag{font-size:11px;font-weight:650;padding:3px 9px;border-radius:999px;white-space:nowrap;flex:none}
+.s-ide{background:var(--surface-2);color:var(--muted)}
+.s-produksi{background:var(--warn-soft);color:var(--warn)}
+.s-terjadwal{background:var(--accent-soft);color:var(--accent)}
+.s-terposting{background:var(--ok-soft);color:var(--ok)}
+.sd{width:7px;height:7px;border-radius:50%}
+.sd.s-ide{background:var(--muted)}.sd.s-produksi{background:var(--warn)}.sd.s-terjadwal{background:var(--accent)}.sd.s-terposting{background:var(--ok)}
+
+/* ============ KPI ============ */
+.kpi{padding:12px 0}
+.kpi + .kpi{border-top:1px solid var(--line)}
+.kpi .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.kpi .lbl{font-size:14px;font-weight:600}
+.kpi .val{font-size:13px;color:var(--muted);white-space:nowrap}
+.kpi .val b{color:var(--text);font-weight:700}
+.prog{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.prog>div{height:100%;border-radius:99px;transition:width .5s}
+.pct{font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px}
+.c-ok{background:var(--ok-soft);color:var(--ok)}.c-mid{background:var(--accent-soft);color:var(--accent)}.c-low{background:var(--warn-soft);color:var(--warn)}.c-bad{background:var(--bad-soft);color:var(--bad)}
+
+/* hero score */
+.hero{display:flex;align-items:center;gap:16px}
+.ring{position:relative;width:92px;height:92px;flex:none}
+.ring svg{width:92px;height:92px;transform:rotate(-90deg)}
+.ring .lbl{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.hero h2{margin:0 0 4px;font-size:17px}
+
+/* ============ Stats ============ */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--surface-2);border-radius:var(--r-md);padding:12px}
+.stat .l{font-size:12px;color:var(--muted);font-weight:600}
+.stat .v{font-size:20px;font-weight:750;margin:4px 0 6px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.delta{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:2px 7px;border-radius:99px}
+.delta.up{background:var(--ok-soft);color:var(--ok)}.delta.down{background:var(--bad-soft);color:var(--bad)}.delta.flat{background:var(--surface);color:var(--muted)}
+.big-stat{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.big-stat .v{font-size:30px;font-weight:800;letter-spacing:-.03em}
+
+/* bars */
+.hbar{display:grid;grid-template-columns:110px 1fr 28px;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.hbar .prog{height:10px}
+
+/* campaign list */
+.camp{padding:12px 0;cursor:pointer}
+.camp + .camp{border-top:1px solid var(--line)}
+.camp .r1{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.camp .t{font-weight:600}
+.camp .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.camp .grid div{font-size:11px;color:var(--muted)}
+.camp .grid b{display:block;font-size:13px;color:var(--text);font-weight:650}
+
+/* achievements */
+.ach{display:flex;gap:12px;align-items:center;padding:11px 0}
+.ach + .ach{border-top:1px solid var(--line)}
+.ach .e{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none}
+.ach .t{font-weight:600;font-size:14px}
+
+/* segmented */
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;height:36px;border-radius:10px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* empty & info */
+.empty{text-align:center;padding:24px 8px}
+.empty .ic{width:56px;height:56px;border-radius:18px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin:0 auto 12px}
+.empty .ic svg{width:26px;height:26px}
+.empty h3{margin:0 0 4px;font-size:16px}
+.banner{display:flex;gap:12px;background:var(--accent-soft);border-radius:var(--r-lg);padding:14px;margin-bottom:12px}
+.banner svg{color:var(--accent);margin-top:1px}
+.banner b{display:block;margin-bottom:2px}
+.banner p{margin:0;font-size:13px;line-height:1.5}
+
+/* ============ Forms & sheet ============ */
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+input,select,textarea{width:100%;height:46px;padding:0 14px;border-radius:12px;border:1.5px solid transparent;background:var(--surface-2);color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:border-color .15s;appearance:none;-webkit-appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+textarea{height:auto;min-height:96px;padding:12px 14px;resize:vertical;line-height:1.45}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:12px;background:var(--surface-2);font-weight:600;font-size:14px;cursor:pointer;border:1.5px solid transparent;user-select:none}
+.opt input{display:none}
+.opt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.file{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:110px;border:1.5px dashed color-mix(in srgb,var(--muted) 45%,transparent);border-radius:var(--r-md);cursor:pointer;color:var(--muted);font-size:13px;text-align:center;padding:12px;overflow:hidden}
+.file input{display:none}
+.file svg{color:var(--accent)}
+.preview{width:100%;max-height:260px;object-fit:contain;border-radius:10px}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal.open{opacity:1;pointer-events:auto}
+.sheet{background:var(--surface);width:100%;max-width:640px;margin:0 auto;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:8px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .25s}
+.modal.open .sheet{transform:none}
+.grab{width:38px;height:5px;border-radius:9px;background:var(--surface-2);margin:2px auto 10px}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet-h h2{margin:0;font-size:19px;font-weight:750}
+.x{border:0;background:var(--surface-2);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.x svg{width:16px;height:16px}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));transform:translate(-50%,10px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:30;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.fade{animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="title"><div class="eyebrow" id="hello">SosmedKit</div><h1 id="pageTitle">Konten</h1></div>
+  <div class="month">
+    <button id="prevM" aria-label="Bulan sebelumnya"><svg class="i" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span id="monthLabel"></span>
+    <button id="nextM" aria-label="Bulan berikutnya"><svg class="i" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+</header>
+
+<main id="view"></main>
+<button class="fab" id="fab" aria-label="Tambah"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+
+<nav id="nav"></nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================== Ikon ================== */
+const I = {
+  plan:'<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  report:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  ads:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  upload:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M20 15v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-3"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+  share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/>',
+  edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+};
+const ic = (k,cls='i') => `<svg class="${cls}" viewBox="0 0 24 24">${I[k]}</svg>`;
+const PF_ICON = {
+  instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg>',
+  tiktok:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7a5.7 5.7 0 1 0 4.9 5.7V9.1a7.3 7.3 0 0 0 4.3 1.4V7.4a4.3 4.3 0 0 1-3.2-1.6Z"/></svg>',
+  facebook:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v2H8v4h2v7h4v-7h3l1-4h-4V8.5c0-.3.2-.5.5-.5Z"/></svg>',
+};
+
+/* ================== Setup ================== */
+const tg = window.Telegram && window.Telegram.WebApp;
+const inTg = !!(tg && tg.initData);
+if (tg) {
+  tg.ready(); tg.expand();
+  if (inTg) {
+    document.documentElement.setAttribute('data-tg','');
+    document.documentElement.setAttribute('data-theme', tg.colorScheme||'light');
+    try{ tg.setHeaderColor('secondary_bg_color'); tg.setBackgroundColor('secondary_bg_color'); }catch(e){}
+    tg.onEvent && tg.onEvent('themeChanged',()=>document.documentElement.setAttribute('data-theme',tg.colorScheme));
+  }
+}
+const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+if (tgUser) document.getElementById('hello').textContent = 'Halo, ' + tgUser.first_name + ' 👋';
+
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BLN = BULAN.map(b=>b.slice(0,3));
+const PLATFORM = {instagram:'Instagram',tiktok:'TikTok',facebook:'Facebook'};
+const STATUS = {ide:'Ide',produksi:'Produksi',terjadwal:'Terjadwal',terposting:'Terposting'};
+const FORMAT = ['Reels','Feed Foto','Carousel','Story','Video TikTok','Live'];
+const PILAR = ['Edukasi','Promo','Hiburan','Testimoni','Behind the Scene','Info Produk'];
+const TABS = [['plan','Konten'],['target','Target'],['report','Laporan'],['ads','Meta Ads'],['upload','Upload']];
+
+const today = new Date();
+let cur = {y: today.getFullYear(), m: today.getMonth()};
+let tab = 'plan', reportSeg = 'bulanan', selDay = null;
+
+const mkey = (y,m) => `${y}-${String(m+1).padStart(2,'0')}`;
+const curKey = () => mkey(cur.y,cur.m);
+const prevKey = () => cur.m===0 ? mkey(cur.y-1,11) : mkey(cur.y,cur.m-1);
+const uid = () => Math.random().toString(36).slice(2,10);
+const fmt = n => (n==null||isNaN(n)) ? '-' : Number(n).toLocaleString('id-ID');
+const rp = n => 'Rp ' + fmt(Math.round(n||0));
+const rpShort = n => { n=Math.round(n||0); if(n>=1e9) return 'Rp '+(n/1e9).toFixed(1).replace('.',',')+' M'; if(n>=1e6) return 'Rp '+(n/1e6).toFixed(1).replace('.',',')+' jt'; if(n>=1e3) return 'Rp '+Math.round(n/1e3)+' rb'; return 'Rp '+n; };
+const pct = (a,b) => b ? (a/b*100) : 0;
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ================== Storage ==================
+   Versi pertama menyimpan data di perangkat (localStorage).
+   Nanti bisa diganti ke Telegram CloudStorage atau server sendiri. */
+const STORE_KEY = 'sosmedkit_v1';
+let db = load();
+function load(){
+  try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d) return d; } catch(e){}
+  return seed();
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+
+function seed(){
+  const k = mkey(today.getFullYear(), today.getMonth());
+  const pm = today.getMonth()===0 ? mkey(today.getFullYear()-1,11) : mkey(today.getFullYear(), today.getMonth()-1);
+  const d = n => `${k}-${String(n).padStart(2,'0')}`;
+  return {
+    posts: [
+      {id:uid(),date:d(3),platform:'instagram',format:'Reels',pilar:'Edukasi',title:'Tips hemat kuota internet',caption:'5 cara biar internet rumah makin lancar 🚀',status:'terposting'},
+      {id:uid(),date:d(5),platform:'tiktok',format:'Video TikTok',pilar:'Hiburan',title:'POV: WiFi lemot pas meeting',caption:'Relate ga? 😅',status:'terposting'},
+      {id:uid(),date:d(8),platform:'instagram',format:'Carousel',pilar:'Promo',title:'Promo akhir bulan',caption:'Diskon spesial pelanggan baru!',status:'terposting'},
+      {id:uid(),date:d(12),platform:'facebook',format:'Feed Foto',pilar:'Testimoni',title:'Cerita pelanggan setia',caption:'',status:'terposting'},
+      {id:uid(),date:d(15),platform:'tiktok',format:'Video TikTok',pilar:'Edukasi',title:'Cara reset router',caption:'',status:'terjadwal'},
+      {id:uid(),date:d(19),platform:'instagram',format:'Story',pilar:'Info Produk',title:'Polling paket favorit',caption:'',status:'terjadwal'},
+      {id:uid(),date:d(22),platform:'instagram',format:'Reels',pilar:'Behind the Scene',title:'Sehari bareng teknisi',caption:'',status:'produksi'},
+      {id:uid(),date:d(26),platform:'tiktok',format:'Video TikTok',pilar:'Hiburan',title:'Trend sound minggu ini',caption:'',status:'ide'},
+    ],
+    targets: {
+      [k]: {followers_ig:12000, followers_tt:8000, reach:150000, er:4.5, posts:20, leads:120, ads_budget:5000000, roas:3}
+    },
+    metrics: {
+      [pm]: {followers_ig:10850, followers_tt:6900, reach:118000, impressions:240000, engagement:4900, leads:85},
+      [k]:  {followers_ig:11420, followers_tt:7650, reach:131500, impressions:276000, engagement:6120, leads:97}
+    },
+    ads: [
+      {id:uid(),month:pm,name:'Awareness Okt',objective:'Awareness',spend:3500000,impressions:410000,reach:198000,clicks:3900,results:62,revenue:9800000},
+      {id:uid(),month:k,name:'Promo Pelanggan Baru',objective:'Leads',spend:2400000,impressions:260000,reach:140000,clicks:3100,results:58,revenue:8700000},
+      {id:uid(),month:k,name:'Retargeting Website',objective:'Traffic',spend:1300000,impressions:120000,reach:52000,clicks:2400,results:21,revenue:4100000},
+      {id:uid(),month:k,name:'Video Views Reels',objective:'Awareness',spend:900000,impressions:180000,reach:110000,clicks:950,results:0,revenue:0},
+    ]
+  };
+}
+
+/* ================== UI helpers ================== */
+const $ = s => document.querySelector(s);
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800); haptic('success'); }
+function haptic(type){ try{ tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(type);}catch(e){} }
+function tap(){ try{ tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();}catch(e){} }
+function openSheet(title, html){
+  $('#sheet').innerHTML=`<div class="grab"></div><div class="sheet-h"><h2>${title}</h2><button class="x" id="closeX" aria-label="Tutup">${ic('x')}</button></div>${html}`;
+  $('#sheet').scrollTop=0; $('#modal').classList.add('open'); $('#closeX').onclick=closeSheet;
+  if(tg && tg.BackButton){ tg.BackButton.show(); tg.BackButton.onClick(closeSheet); }
+}
+function closeSheet(){ $('#modal').classList.remove('open'); if(tg && tg.BackButton){ tg.BackButton.hide(); tg.BackButton.offClick(closeSheet);} }
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeSheet(); });
+
+$('#prevM').onclick=()=>{ cur.m--; if(cur.m<0){cur.m=11;cur.y--;} selDay=null; tap(); render(); };
+$('#nextM').onclick=()=>{ cur.m++; if(cur.m>11){cur.m=0;cur.y++;} selDay=null; tap(); render(); };
+$('#nav').innerHTML = TABS.map(([k,l])=>`<button data-tab="${k}"><span class="pill">${ic(k)}</span>${l}</button>`).join('');
+function setTab(t){ tab=t; tap(); render(); window.scrollTo(0,0); }
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+function render(){
+  $('#monthLabel').textContent = BLN[cur.m]+' '+cur.y;
+  $('#pageTitle').textContent = Object.fromEntries(TABS)[tab];
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  $('#fab').style.display = (tab==='plan'||tab==='ads') ? '' : 'none';
+  const v = $('#view');
+  v.innerHTML = ({plan:viewPlan,target:viewTarget,report:viewReport,ads:viewAds,upload:viewUpload})[tab]();
+  v.classList.remove('fade'); void v.offsetWidth; v.classList.add('fade');
+  bind();
+}
+function emptyBlock(icon,title,text,btn){ return `<div class="empty"><div class="ic">${ic(icon)}</div><h3>${title}</h3><div class="note">${text}</div>${btn?`<div class="btn-stack">${btn}</div>`:''}</div>`; }
+
+/* ================== Hitung data ================== */
+function postsOf(key){ return db.posts.filter(p=>p.date.startsWith(key)); }
+function adsOf(key){ return db.ads.filter(a=>a.month===key); }
+function adsSum(key){
+  const s={spend:0,impressions:0,reach:0,clicks:0,results:0,revenue:0};
+  adsOf(key).forEach(a=>{ for(const f in s) s[f]+=Number(a[f])||0; });
+  s.ctr = pct(s.clicks,s.impressions); s.cpc = s.clicks? s.spend/s.clicks:0;
+  s.cpm = s.impressions? s.spend/s.impressions*1000:0; s.cpr = s.results? s.spend/s.results:0;
+  s.roas = s.spend? s.revenue/s.spend:0;
+  return s;
+}
+function actuals(key){
+  const m = db.metrics[key]||{};
+  const posted = postsOf(key).filter(p=>p.status==='terposting').length;
+  const er = m.reach ? m.engagement/m.reach*100 : 0;
+  const a = adsSum(key);
+  return {followers_ig:m.followers_ig||0, followers_tt:m.followers_tt||0, reach:m.reach||0, er, posts:posted, leads:m.leads||0, ads_budget:a.spend, roas:a.roas, impressions:m.impressions||0, engagement:m.engagement||0};
+}
+const KPI_DEF = [
+  {k:'followers_ig',label:'Followers Instagram',f:fmt},
+  {k:'followers_tt',label:'Followers TikTok',f:fmt},
+  {k:'reach',label:'Total Reach',f:fmt},
+  {k:'er',label:'Engagement Rate',f:v=>v.toFixed(2)+'%'},
+  {k:'posts',label:'Jumlah Posting',f:fmt},
+  {k:'leads',label:'Leads / Inquiry',f:fmt},
+  {k:'ads_budget',label:'Budget Iklan Terpakai',f:rpShort,budget:true},
+  {k:'roas',label:'ROAS Iklan',f:v=>v.toFixed(2)+'x'},
+];
+function lvl(p,budget){ if(budget) return p>100?'bad':'mid'; return p>=100?'ok':p>=70?'mid':'low'; }
+const LVL_COLOR={ok:'var(--ok)',mid:'var(--accent)',low:'var(--warn)',bad:'var(--bad)'};
+function scoreOf(key){
+  const t=db.targets[key]; if(!t) return null; const a=actuals(key);
+  const ks=KPI_DEF.filter(d=>!d.budget&&t[d.k]); if(!ks.length) return null;
+  return Math.round(ks.reduce((s,d)=>s+Math.min(pct(a[d.k],t[d.k]),100),0)/ks.length);
+}
+function ring(p,color,size=92,stroke=9){
+  const r=(size-stroke)/2, c=2*Math.PI*r, off=c*(1-Math.min(p,100)/100);
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px"><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="var(--surface-2)" stroke-width="${stroke}" fill="none"/><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="${color}" stroke-width="${stroke}" fill="none" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg><div class="lbl">${p==null?'-':p+'%'}</div></div>`;
+}
+
+/* ================== View: Content Planning ================== */
+function viewPlan(){
+  const first = new Date(cur.y,cur.m,1).getDay();
+  const offset = (first+6)%7;
+  const days = new Date(cur.y,cur.m+1,0).getDate();
+  const key = curKey(); const posts = postsOf(key);
+  let cells = ['S','S','R','K','J','S','M'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<offset;i++) cells+='<div class="day empty"></div>';
+  for(let d=1; d<=days; d++){
+    const ds = `${key}-${String(d).padStart(2,'0')}`;
+    const ps = posts.filter(p=>p.date===ds);
+    const dow = (offset+d-1)%7;
+    const isToday = today.getFullYear()===cur.y && today.getMonth()===cur.m && today.getDate()===d;
+    cells += `<button class="day ${dow>=5?'wk':''} ${isToday?'today':''} ${selDay===ds?'sel':''}" data-day="${ds}"><span class="n">${d}</span><span class="dots">${ps.slice(0,3).map(p=>`<i class="dot p-${p.platform}"></i>`).join('')}</span></button>`;
+  }
+  const list = (selDay ? posts.filter(p=>p.date===selDay) : posts).sort((a,b)=>a.date.localeCompare(b.date));
+  const cnt = s => posts.filter(p=>p.status===s).length;
+  return `
+  <div class="chips">${Object.keys(STATUS).map(s=>`<div class="chip"><div class="l"><i class="sd s-${s}"></i>${STATUS[s]}</div><div class="v">${cnt(s)}</div></div>`).join('')}</div>
+  <div class="card">
+    <div class="cal">${cells}</div>
+    <div class="legend"><span><i class="dot p-instagram"></i>Instagram</span><span><i class="dot p-tiktok"></i>TikTok</span><span><i class="dot p-facebook"></i>Facebook</span></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>${selDay ? 'Konten '+tglIndo(selDay) : 'Jadwal bulan ini'}</h2>${selDay?'<button class="link" id="clearDay">Lihat semua</button>':`<span class="muted small">${posts.length} konten</span>`}</div>
+    ${list.length ? list.map(postRow).join('') : emptyBlock('plan','Belum ada konten', selDay?'Tanggal ini masih kosong.':'Tap tombol + untuk menambah ide konten.', '<button class="btn sec" id="addPost">Tambah konten</button>')}
+  </div>`;
+}
+function tglIndo(ds){ const [y,m,d]=ds.split('-'); return `${+d} ${BULAN[m-1]}`; }
+function postRow(p){
+  const [y,m,d]=p.date.split('-');
+  return `<div class="post" data-post="${p.id}">
+    <div class="date-col"><b>${+d}</b><span>${BLN[m-1]}</span></div>
+    <div class="pf ${p.platform}">${PF_ICON[p.platform]}</div>
+    <div class="body"><div class="t">${esc(p.title)}</div><div class="m">${esc(p.format)} · ${esc(p.pilar)}</div></div>
+    <span class="tag s-${p.status}">${STATUS[p.status]}</span>
+  </div>`;
+}
+function postForm(p){
+  p = p || {date: selDay || `${curKey()}-${String(Math.min(today.getDate(),28)).padStart(2,'0')}`, platform:'instagram', format:'Reels', pilar:'Edukasi', status:'ide', title:'', caption:''};
+  const opt = (arr,v) => arr.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
+  const optO = (obj,v) => Object.keys(obj).map(x=>`<option value="${x}" ${x===v?'selected':''}>${obj[x]}</option>`).join('');
+  openSheet(p.id?'Edit konten':'Konten baru', `
+    <label class="f">Judul / ide konten</label><input id="f_title" value="${esc(p.title)}" placeholder="mis. Tips internet lancar">
+    <label class="f">Platform</label>
+    <div class="opts" id="f_platform">${Object.keys(PLATFORM).map(k=>`<label class="opt ${k===p.platform?'on':''}"><input type="radio" name="pf" value="${k}" ${k===p.platform?'checked':''}>${PLATFORM[k]}</label>`).join('')}</div>
+    <div class="row"><div><label class="f">Tanggal</label><input type="date" id="f_date" value="${p.date}"></div>
+    <div><label class="f">Status</label><select id="f_status">${optO(STATUS,p.status)}</select></div></div>
+    <div class="row"><div><label class="f">Format</label><select id="f_format">${opt(FORMAT,p.format)}</select></div>
+    <div><label class="f">Content pillar</label><select id="f_pilar">${opt(PILAR,p.pilar)}</select></div></div>
+    <label class="f">Caption / brief</label><textarea id="f_caption" placeholder="Tulis caption, hashtag, atau brief untuk desainer">${esc(p.caption)}</textarea>
+    <div class="btn-stack">
+      <button class="btn" id="savePost">Simpan</button>
+      ${p.id?`<button class="btn sec" id="toUpload">${ic('upload')}Siapkan untuk upload</button><button class="btn danger" id="delPost">Hapus konten</button>`:''}
+    </div>`);
+  bindOpts('#f_platform');
+  $('#savePost').onclick=()=>{
+    const data={title:$('#f_title').value.trim()||'Tanpa judul',date:$('#f_date').value,status:$('#f_status').value,platform:document.querySelector('#f_platform input:checked').value,format:$('#f_format').value,pilar:$('#f_pilar').value,caption:$('#f_caption').value};
+    if(p.id) Object.assign(db.posts.find(x=>x.id===p.id),data); else db.posts.push({id:uid(),...data});
+    save(); closeSheet(); render(); toast('Konten tersimpan');
+  };
+  if(p.id){
+    $('#delPost').onclick=()=>{ db.posts=db.posts.filter(x=>x.id!==p.id); save(); closeSheet(); render(); toast('Konten dihapus'); };
+    $('#toUpload').onclick=()=>{ closeSheet(); uploadDraft=p.id; setTab('upload'); };
+  }
+}
+function bindOpts(sel){
+  document.querySelectorAll(sel+' .opt').forEach(o=>o.addEventListener('click',()=>{
+    const inp=o.querySelector('input');
+    if(inp.type==='radio'){ document.querySelectorAll(sel+' .opt').forEach(x=>x.classList.remove('on')); inp.checked=true; o.classList.add('on'); }
+    else { setTimeout(()=>o.classList.toggle('on',inp.checked)); }
+    tap();
+  }));
+}
+
+/* ================== View: Target ================== */
+function viewTarget(){
+  const key=curKey(), t=db.targets[key], a=actuals(key);
+  if(!t) return `<div class="card">${emptyBlock('target','Belum ada target','Tentukan KPI untuk '+BULAN[cur.m]+' supaya progresnya bisa dipantau.',
+    `<button class="btn" id="editTarget">Buat target</button>${db.targets[prevKey()]?'<button class="btn sec" id="copyTarget">Salin target bulan lalu</button>':''}`)}</div>`;
+  const rows = KPI_DEF.map(d=>{
+    const tv=t[d.k]||0, av=a[d.k]||0, p=pct(av,tv), l=lvl(p,d.budget);
+    return `<div class="kpi"><div class="top"><span class="lbl">${d.label}</span><span class="pct c-${l}">${p.toFixed(0)}%</span></div>
+      <div class="prog"><div style="width:${Math.min(p,100)}%;background:${LVL_COLOR[l]}"></div></div>
+      <div class="val" style="margin-top:6px"><b>${d.f(av)}</b> dari ${d.f(tv)} ${d.budget?'terpakai':''}</div></div>`;
+  }).join('');
+  const done = KPI_DEF.filter(d=>!d.budget && pct(a[d.k],t[d.k])>=100).length;
+  const sc = scoreOf(key);
+  return `<div class="card"><div class="hero">${ring(sc,LVL_COLOR[lvl(sc)])}
+      <div><h2>${done} dari ${KPI_DEF.length-1} KPI tercapai</h2><div class="note">Rata-rata capaian ${BULAN[cur.m]} ${cur.y}. Budget iklan tidak dihitung dalam skor.</div></div></div></div>
+    <div class="card"><div class="card-h"><h2>Progres KPI</h2><button class="link" id="editTarget">Ubah target</button></div>${rows}</div>
+    <div class="banner">${ic('info')}<div><b>Angka aktual</b><p>Followers, reach, engagement, dan leads diisi manual tiap bulan. Jumlah posting dihitung dari konten berstatus Terposting, dan data iklan dari menu Meta Ads.</p></div></div>
+    <button class="btn sec" id="editMetrics">${ic('edit')}Isi angka aktual</button>`;
+}
+function targetForm(){
+  const key=curKey(), t=db.targets[key]||{};
+  openSheet('Target '+BULAN[cur.m], `
+    ${KPI_DEF.map(d=>`<label class="f">${d.label}${d.k==='er'?' (%)':d.k==='ads_budget'?' (Rp)':''}</label><input type="number" inputmode="decimal" step="any" id="t_${d.k}" value="${t[d.k]??''}">`).join('')}
+    <div class="btn-stack"><button class="btn" id="saveTarget">Simpan target</button></div>`);
+  $('#saveTarget').onclick=()=>{ const o={}; KPI_DEF.forEach(d=>o[d.k]=parseFloat($('#t_'+d.k).value)||0); db.targets[key]=o; save(); closeSheet(); render(); toast('Target tersimpan'); };
+}
+const MET_DEF=[['followers_ig','Followers Instagram (akhir bulan)'],['followers_tt','Followers TikTok (akhir bulan)'],['reach','Total reach'],['impressions','Total impressions'],['engagement','Total engagement (like, komen, share, save)'],['leads','Leads / inquiry']];
+function metricsForm(){
+  const key=curKey(), m=db.metrics[key]||{};
+  openSheet('Angka aktual '+BULAN[cur.m], `
+    ${MET_DEF.map(([k,l])=>`<label class="f">${l}</label><input type="number" inputmode="numeric" id="m_${k}" value="${m[k]??''}">`).join('')}
+    <div class="btn-stack"><button class="btn" id="saveMet">Simpan</button></div>`);
+  $('#saveMet').onclick=()=>{ const o={}; MET_DEF.forEach(([k])=>o[k]=parseFloat($('#m_'+k).value)||0); db.metrics[key]=o; save(); closeSheet(); render(); toast('Angka tersimpan'); };
+}
+
+/* ================== View: Laporan ================== */
+function delta(a,b,inverse){
+  if(!b) return '<span class="delta flat">baru</span>';
+  const d=(a-b)/b*100; if(Math.abs(d)<0.05) return '<span class="delta flat">0%</span>';
+  const good = inverse ? d<0 : d>0;
+  return `<span class="delta ${good?'up':'down'}">${d>0?'↑':'↓'} ${Math.abs(d).toFixed(1)}%</span>`;
+}
+function viewReport(){
+  const seg = `<div class="seg"><button data-seg="bulanan" class="${reportSeg==='bulanan'?'active':''}">Bulanan</button><button data-seg="pencapaian" class="${reportSeg==='pencapaian'?'active':''}">Pencapaian</button></div>`;
+  return seg + (reportSeg==='bulanan' ? reportMonthly() : reportAchieve());
+}
+function reportMonthly(){
+  const key=curKey(), a=actuals(key), b=actuals(prevKey());
+  if(!db.metrics[key]) return `<div class="card">${emptyBlock('report','Angka belum diisi','Isi angka aktual '+BULAN[cur.m]+' untuk membuat laporan.','<button class="btn" id="editMetrics">Isi angka aktual</button>')}</div>`;
+  const posts=postsOf(key).filter(p=>p.status==='terposting');
+  const byPlat = Object.keys(PLATFORM).map(k=>[PLATFORM[k],posts.filter(p=>p.platform===k).length,`var(--${k==='instagram'?'ig':k==='tiktok'?'tt':'fb'})`]);
+  const byPilar = PILAR.map(k=>[k,posts.filter(p=>p.pilar===k).length,'var(--accent)']).filter(x=>x[1]);
+  const s = (l,v,d)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${d}</div>`;
+  return `<div class="card">
+    <div class="big-stat"><div><div class="note">Total reach ${BULAN[cur.m]}</div><div class="v">${fmt(a.reach)}</div></div>${delta(a.reach,b.reach)}</div>
+    <div class="stats">
+      ${s('Followers IG',fmt(a.followers_ig),delta(a.followers_ig,b.followers_ig))}
+      ${s('Followers TikTok',fmt(a.followers_tt),delta(a.followers_tt,b.followers_tt))}
+      ${s('Impressions',fmt(a.impressions),delta(a.impressions,b.impressions))}
+      ${s('Engagement',fmt(a.engagement),delta(a.engagement,b.engagement))}
+      ${s('Engagement rate',a.er.toFixed(2)+'%',delta(a.er,b.er))}
+      ${s('Leads',fmt(a.leads),delta(a.leads,b.leads))}
+    </div>
+    <div class="note" style="margin-top:10px">Persentase dibanding ${BULAN[(cur.m+11)%12]}.</div></div>
+    <div class="card"><div class="card-h"><h2>Posting per platform</h2><span class="muted small">${posts.length} terposting</span></div>${barChart(byPlat)}
+    <div class="section-label">Per content pillar</div>${byPilar.length?barChart(byPilar):'<div class="note">Belum ada posting.</div>'}</div>
+    <div class="btn-stack" style="margin-top:0"><button class="btn" id="shareReport">${ic('share')}Salin ringkasan untuk chat</button><button class="btn sec" id="editMetrics">${ic('edit')}Ubah angka aktual</button></div>`;
+}
+function barChart(rows){
+  const max=Math.max(1,...rows.map(r=>r[1]));
+  return rows.map(([l,v,c])=>`<div class="hbar"><span>${esc(l)}</span><div class="prog"><div style="width:${v/max*100}%;background:${c}"></div></div><b style="text-align:right">${fmt(v)}</b></div>`).join('');
+}
+function reportAchieve(){
+  const key=curKey(), t=db.targets[key], a=actuals(key), b=actuals(prevKey());
+  const items=[];
+  if(t) KPI_DEF.forEach(d=>{ if(d.budget||!t[d.k]) return; const p=pct(a[d.k],t[d.k]); const l=lvl(p);
+    items.push({e:p>=100?'🏆':p>=80?'🔥':'⏳',bg:`var(--${l==='ok'?'ok':l==='mid'?'accent':'warn'}-soft)`,t:`${d.label}: ${d.f(a[d.k])}`,s:`${p.toFixed(0)}% dari target ${d.f(t[d.k])}`,ok:p>=100,p}); });
+  items.sort((x,y)=>y.p-x.p);
+  const gainIg=a.followers_ig-b.followers_ig, gainTt=a.followers_tt-b.followers_tt;
+  const extra=[];
+  if(b.followers_ig && gainIg>0) extra.push({e:'📈',bg:'var(--ok-soft)',t:`+${fmt(gainIg)} followers Instagram`,s:'pertumbuhan bulan ini',ok:true});
+  if(b.followers_tt && gainTt>0) extra.push({e:'📈',bg:'var(--ok-soft)',t:`+${fmt(gainTt)} followers TikTok`,s:'pertumbuhan bulan ini',ok:true});
+  const as=adsSum(key); if(as.roas>=3) extra.push({e:'💸',bg:'var(--ok-soft)',t:`ROAS iklan ${as.roas.toFixed(2)}x`,s:'iklan menghasilkan lebih dari 3x biaya',ok:true});
+  const all=[...extra,...items];
+  const sc=scoreOf(key);
+  const li=i=>`<div class="ach"><div class="e" style="background:${i.bg}">${i.e}</div><div><div class="t">${esc(i.t)}</div><div class="note">${esc(i.s)}</div></div></div>`;
+  return `<div class="card"><div class="hero">${ring(sc,LVL_COLOR[lvl(sc)])}<div><h2>Skor ${BULAN[cur.m]}</h2><div class="note">${t?'Rata-rata capaian semua KPI, maksimal 100% per KPI.':'Buat target dulu di menu Target.'}</div></div></div></div>
+    <div class="card"><div class="card-h"><h2>Pencapaian</h2><span class="muted small">${all.filter(i=>i.ok).length} tercapai</span></div>
+    ${all.length?all.map(li).join(''):emptyBlock('target','Belum ada data','Isi target dan angka aktual dulu.')}</div>`;
+}
+function shareText(){
+  const key=curKey(), a=actuals(key), as=adsSum(key);
+  return `📊 Laporan ${BULAN[cur.m]} ${cur.y}\n\nFollowers IG: ${fmt(a.followers_ig)}\nFollowers TikTok: ${fmt(a.followers_tt)}\nReach: ${fmt(a.reach)}\nEngagement rate: ${a.er.toFixed(2)}%\nPosting: ${a.posts}\nLeads: ${fmt(a.leads)}\n\n💰 Meta Ads\nSpend: ${rp(as.spend)}\nHasil: ${fmt(as.results)}\nCPR: ${rp(as.cpr)}\nROAS: ${as.roas.toFixed(2)}x`;
+}
+
+/* ================== View: Meta Ads ================== */
+function viewAds(){
+  const key=curKey(), s=adsSum(key), p=adsSum(prevKey()), list=adsOf(key);
+  const st=(l,v,d)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${d}</div>`;
+  return `<div class="card">
+    <div class="big-stat"><div><div class="note">Total spend ${BULAN[cur.m]}</div><div class="v">${rp(s.spend)}</div></div>${delta(s.spend,p.spend)}</div>
+    <div class="stats">
+      ${st('Hasil',fmt(s.results),delta(s.results,p.results))}
+      ${st('Cost per result',rpShort(s.cpr),delta(s.cpr,p.cpr,true))}
+      ${st('ROAS',s.roas.toFixed(2)+'x',delta(s.roas,p.roas))}
+      ${st('CTR',s.ctr.toFixed(2)+'%',delta(s.ctr,p.ctr))}
+      ${st('CPC',rp(s.cpc),delta(s.cpc,p.cpc,true))}
+      ${st('CPM',rpShort(s.cpm),delta(s.cpm,p.cpm,true))}
+    </div>
+    <div class="note" style="margin-top:10px">Hijau berarti membaik. Untuk biaya (CPR, CPC, CPM), turun itu bagus.</div></div>
+    <div class="card"><div class="card-h"><h2>Kampanye</h2><span class="muted small">${list.length} aktif</span></div>
+    ${list.length?list.map(c=>`<div class="camp" data-ad="${c.id}">
+      <div class="r1"><span class="t">${esc(c.name)}</span><span class="tag s-terjadwal">${esc(c.objective)}</span></div>
+      <div class="grid"><div>Spend<b>${rpShort(c.spend)}</b></div><div>Hasil<b>${fmt(c.results)}</b></div><div>CPR<b>${c.results?rpShort(c.spend/c.results):'-'}</b></div><div>CTR<b>${pct(c.clicks,c.impressions).toFixed(2)}%</b></div></div>
+    </div>`).join(''):emptyBlock('ads','Belum ada kampanye','Tap tombol + untuk menambah data kampanye dari Ads Manager.')}</div>
+    <div class="banner">${ic('info')}<div><b>Masih input manual</b><p>Salin angkanya dari Ads Manager. Setelah disambungkan ke Meta Marketing API, data ini bisa ditarik otomatis.</p></div></div>`;
+}
+function adForm(c){
+  c=c||{name:'',objective:'Leads',spend:'',impressions:'',reach:'',clicks:'',results:'',revenue:''};
+  const F=[['spend','Spend (Rp)'],['impressions','Impressions'],['reach','Reach'],['clicks','Klik link'],['results','Hasil (leads, pembelian, dll)'],['revenue','Pendapatan dari iklan (Rp, opsional)']];
+  openSheet(c.id?'Edit kampanye':'Kampanye baru', `
+    <label class="f">Nama kampanye</label><input id="a_name" value="${esc(c.name)}" placeholder="mis. Promo Desember">
+    <label class="f">Objective</label><select id="a_objective">${['Awareness','Traffic','Engagement','Leads','App Promotion','Sales'].map(o=>`<option ${o===c.objective?'selected':''}>${o}</option>`).join('')}</select>
+    <div class="row">${F.map(([k,l])=>`<div style="${k==='results'||k==='revenue'?'grid-column:1/-1':''}"><label class="f">${l}</label><input type="number" inputmode="numeric" id="a_${k}" value="${c[k]}"></div>`).join('')}</div>
+    <div class="btn-stack"><button class="btn" id="saveAd">Simpan</button>${c.id?'<button class="btn danger" id="delAd">Hapus kampanye</button>':''}</div>`);
+  $('#saveAd').onclick=()=>{ const o={name:$('#a_name').value.trim()||'Kampanye',objective:$('#a_objective').value,month:c.month||curKey()}; F.forEach(([k])=>o[k]=parseFloat($('#a_'+k).value)||0);
+    if(c.id) Object.assign(db.ads.find(x=>x.id===c.id),o); else db.ads.push({id:uid(),...o}); save(); closeSheet(); render(); toast('Kampanye tersimpan'); };
+  if(c.id) $('#delAd').onclick=()=>{ db.ads=db.ads.filter(x=>x.id!==c.id); save(); closeSheet(); render(); toast('Kampanye dihapus'); };
+}
+
+/* ================== View: Upload ==================
+   Prototipe: belum benar-benar posting. Tombol "Posting otomatis" akan
+   memanggil backend yang terhubung ke Instagram Graph API /
+   TikTok Content Posting API setelah akses disetujui. */
+let uploadDraft=null;
+function viewUpload(){
+  const ready = db.posts.filter(p=>p.status==='terjadwal'||p.status==='produksi').sort((a,b)=>a.date.localeCompare(b.date));
+  const p = uploadDraft ? db.posts.find(x=>x.id===uploadDraft) : null;
+  const igOn = !p||p.platform==='instagram', ttOn = !!(p&&p.platform==='tiktok');
+  return `<div class="banner">${ic('bolt')}<div><b>Mode prototipe</b><p>Posting otomatis butuh akun yang terhubung dan izin dari Meta & TikTok. Untuk sekarang, caption disalin lalu aplikasinya dibuka, jadi kamu tinggal tempel dan posting.</p></div></div>
+  <div class="card">
+    <label class="f" style="margin-top:0">Konten dari kalender</label>
+    <select id="u_post"><option value="">Pilih konten…</option>${ready.map(x=>`<option value="${x.id}" ${p&&p.id===x.id?'selected':''}>${tglIndo(x.date)} · ${PLATFORM[x.platform]} · ${esc(x.title)}</option>`).join('')}</select>
+    <label class="f">Foto / video</label>
+    <label class="file" id="u_drop"><input type="file" id="u_file" accept="image/*,video/*"><span id="u_prev">${ic('image')}<br>Tap untuk pilih file</span></label>
+    <label class="f">Caption</label><textarea id="u_caption" placeholder="Caption dan hashtag">${esc(p?p.caption:'')}</textarea>
+    <label class="f">Posting ke</label>
+    <div class="opts" id="u_dest">
+      <label class="opt ${igOn?'on':''}"><input type="checkbox" id="u_ig" ${igOn?'checked':''}><span class="pf instagram" style="width:24px;height:24px;border-radius:7px">${PF_ICON.instagram}</span>Instagram</label>
+      <label class="opt ${ttOn?'on':''}"><input type="checkbox" id="u_tt" ${ttOn?'checked':''}><span class="pf tiktok" style="width:24px;height:24px;border-radius:7px">${PF_ICON.tiktok}</span>TikTok</label>
+    </div>
+    <div class="btn-stack">
+      <button class="btn" id="u_go">${ic('upload')}Salin caption & buka aplikasi</button>
+      <button class="btn ghost" id="u_api">Posting otomatis (segera)</button>
+    </div>
+  </div>`;
+}
+function openApp(platform){
+  const url = platform==='instagram' ? 'https://www.instagram.com/' : 'https://www.tiktok.com/upload';
+  if(tg && tg.openLink) tg.openLink(url); else window.open(url,'_blank');
+}
+
+/* ================== Event binding ================== */
+function bind(){
+  document.querySelectorAll('[data-day]').forEach(el=>el.onclick=()=>{ selDay = selDay===el.dataset.day?null:el.dataset.day; tap(); render(); });
+  document.querySelectorAll('[data-post]').forEach(el=>el.onclick=()=>postForm(db.posts.find(p=>p.id===el.dataset.post)));
+  document.querySelectorAll('[data-ad]').forEach(el=>el.onclick=()=>adForm(db.ads.find(a=>a.id===el.dataset.ad)));
+  document.querySelectorAll('[data-seg]').forEach(el=>el.onclick=()=>{ reportSeg=el.dataset.seg; tap(); render(); });
+  const on=(id,fn)=>{ const e=$('#'+id); if(e) e.onclick=fn; };
+  on('addPost',()=>postForm());
+  on('clearDay',()=>{selDay=null;render();});
+  on('editTarget',targetForm);
+  on('copyTarget',()=>{ db.targets[curKey()]={...db.targets[prevKey()]}; save(); render(); toast('Target disalin'); });
+  on('editMetrics',metricsForm);
+  on('shareReport',async()=>{
+    const txt=shareText();
+    try{ await navigator.clipboard.writeText(txt); toast('Ringkasan disalin, tempel di chat'); }
+    catch(e){ openSheet('Ringkasan',`<textarea style="min-height:280px">${esc(txt)}</textarea>`); }
+  });
+  const sel=$('#u_post');
+  if(sel){
+    sel.onchange=()=>{ uploadDraft=sel.value||null; render(); };
+    bindOpts('#u_dest');
+    $('#u_file').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const u=URL.createObjectURL(f);
+      $('#u_prev').innerHTML = f.type.startsWith('video') ? `<video class="preview" src="${u}" controls></video>` : `<img class="preview" src="${u}">`; };
+    on('u_go',async()=>{
+      const cap=$('#u_caption').value; try{ await navigator.clipboard.writeText(cap);}catch(e){}
+      const ig=$('#u_ig').checked, tt=$('#u_tt').checked;
+      if(!ig&&!tt) return toast('Pilih minimal satu tujuan');
+      if(uploadDraft){ const p=db.posts.find(x=>x.id===uploadDraft); p.status='terposting'; p.caption=cap; save(); }
+      toast('Caption disalin'); openApp(ig?'instagram':'tiktok');
+    });
+    on('u_api',()=>{ openSheet('Posting otomatis',`<div class="note" style="line-height:1.6;color:var(--text)">
+      Fitur ini aktif setelah:<br><br>
+      <b>Instagram</b>: akun Business/Creator yang terhubung ke Facebook Page, lalu aplikasi kita lolos App Review Meta untuk izin <i>instagram_content_publish</i>.<br><br>
+      <b>TikTok</b>: aplikasi didaftarkan di TikTok for Developers dan disetujui untuk Content Posting API. Sebelum lolos audit, postingan hanya bisa privat.<br><br>
+      Keduanya juga butuh server kecil (backend) untuk menyimpan token login dengan aman.</div>
+      <div class="btn-stack"><button class="btn" id="okApi">Oke, mengerti</button></div>`); $('#okApi').onclick=closeSheet; });
+  }
+}
+$('#fab').onclick=()=>{ tap(); tab==='ads' ? adForm() : postForm(); };
+
+render();
+</script>
+</body>
+</html>
